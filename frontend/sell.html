@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head><title>Post Listing</title></head>
+<body>
+  <h2>Create Listing</h2>
+  <form id="sellForm">
+    <!-- inputs for title, type, price, area, address fields -->
+    <button>Submit</button>
+  </form>
+  <script type="module">
+    import { apiFetch } from './auth.js';
+    document.getElementById('sellForm').onsubmit = async e => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        title: form.title.value,
+        type: form.type.value,
+        price: +form.price.value,
+        area: +form.area.value,
+        address: form.address.value,
+        city: form.city.value,
+        areaName: form.areaName.value,
+        pincode: form.pincode.value,
+        location: {
+          lat: +form.lat.value,
+          lng: +form.lng.value
+        },
+        description: form.description.value
+      };
+      try {
+        const res = await apiFetch('/api/listings', {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+        alert('Listing created as pending approval.');
+      } catch (err) {
+        alert(err.message);
+      }
+    };
+  </script>
+</body>
+</html>

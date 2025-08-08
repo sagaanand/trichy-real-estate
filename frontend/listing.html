@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>All Listings</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Property Listings</h1>
+
+  <!-- 🔍 Filter Form -->
+  <form id="filterForm" class="filters">
+    <input type="text" name="search" placeholder="Search by name, area, etc..." />
+    <select name="type">
+      <option value="">All Types</option>
+      <option value="house">House</option>
+      <option value="apartment">Apartment</option>
+      <option value="land">Land</option>
+    </select>
+    <input type="number" name="minPrice" placeholder="Min ₹" />
+    <input type="number" name="maxPrice" placeholder="Max ₹" />
+    <button type="submit">Apply Filters</button>
+  </form>
+
+  <!-- 🔽 Listings -->
+  <div id="feed" class="grid"></div>
+
+  <script type="module">
+    import { apiFetch } from './auth.js';
+
+    const feed = document.getElementById('feed');
+    const form = document.getElementById('filterForm');
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const q = new URLSearchParams(new FormData(form)).toString();
+      loadListings(q);
+    };
+
+    async function loadListings(query = '') {
+      try {
+        const listings = await apiFetch('/api/listings?' + query);
+        feed.innerHTML = listings
+          .filter(l => l.status === 'approved')
+          .map(l => `
+            <div class="card">
+              <img src="${l.images?.[0] || 'https://source.unsplash.com/400x300/?property'}" />
+              <h3>${l.title}</h3>
+              <p>${l.type} • ₹${l.price.toLocaleString()}</p>
+              <p>${l.address}</p>
+            </div>
+          `).join('');
+      } catch (err) {
+        feed.innerHTML = '<p>❌ Failed to load listings.</p>';
+      }
+    }
+
+    // Load all on page start
+    loadListings();
+  </script>
+</body>
+</html>
+// Example: inside /routes/listings.js
+
+router.get('/', async (req, res) => {
+  const { search, type, minPrice, maxPrice } = req.query;
+  const filter = { status: 'approved' };
+
+  if (type) filter.type = type;
+  if (minPrice) filter.price = { ...filter.price, $gte: +minPrice };
+  if (maxPrice) filter.price = { ...filter.price, $lte: +maxPrice };
+  if (search) {
+    const regex = new RegExp(search, 'i');
+    filter.$or = [
+      { title: regex },
+      { areaName: regex },
+      { address: regex },
+      { city: regex }
+    ];
+  }
+
+  const listings = await Listing.find(filter).sort({ createdAt: -1 });
+  res.json(listings);
+});
